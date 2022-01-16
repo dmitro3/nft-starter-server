@@ -4,12 +4,8 @@
     <meta name="generator" content="React Static" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preload" as="script" href="/templates/styles.402de4f5.js" />
-    <link
-      rel="preload"
-      as="script"
-      href="/templates/vendors~main.e5b7d28e.js"
-    />
+    <link rel="preload" as="script" href="/styles.402de4f5.js" />
+    <link rel="preload" as="script" href="/vendors~main.e5b7d28e.js" />
     <link rel="preload" as="script" href="/main.db6e4397.js" />
     <link
       rel="stylesheet"
@@ -50,7 +46,7 @@
                     rgba(0, 0, 0, 0.35) 100%,
                     rgba(0, 0, 0, 0.35) 100%
                   ),
-                  url(@@Banner@@);
+                  url(<%- banner %>);
                 -webkit-background-size: cover;
                 background-size: cover;
                 -webkit-background-position: center;
@@ -60,7 +56,7 @@
             </style>
             <div
               class="MuiContainer-root MuiContainer-disableGutters react-static-styles-pi13qb"
-              banner="@@Banner@@"
+              banner="<%- banner %>"
             >
               <style data-emotion="react-static-styles 1qsxih2">
                 .react-static-styles-1qsxih2 {
@@ -124,7 +120,7 @@
                   <h1
                     class="MuiTypography-root MuiTypography-h4 react-static-styles-1xvinid"
                   >
-                    @@Collection Name@@
+                    <%= collectionName %>
                   </h1>
                 </div>
               </div>
@@ -162,7 +158,7 @@
               <div
                 class="introduction custom-html-style MuiBox-root react-static-styles-g7ms5p"
               >
-                <p>@@introduction@@</p>
+                <%- introductionHTML %>
               </div>
               <style data-emotion="react-static-styles eclfwb">
                 .react-static-styles-eclfwb {
@@ -189,16 +185,18 @@
                     height: 100%;
                   }
                 </style>
+                <% tokens.forEach(token => { %>
                 <li
                   class="MuiImageListItem-root MuiImageListItem-masonry react-static-styles-h1nhr5"
                   style="height: auto; margin-bottom: 8px"
                 >
                   <img
-                    src="@@Token Image@@"
+                    src="<%- token.tokenImage %>"
                     loading="lazy"
                     class="MuiImageListItem-img"
                   />
                 </li>
+                <% }) %>
               </ul>
               <style data-emotion="react-static-styles 1thc6b2">
                 .react-static-styles-1thc6b2 {
@@ -327,15 +325,11 @@
         '{"template":"__react_static_root__/src/pages/index.tsx","sharedHashesByProp":{},"data":{},"path":"/","sharedData":{},"siteData":{}}'
       );
     </script>
+    <script defer="" type="text/javascript" src="/styles.402de4f5.js"></script>
     <script
       defer=""
       type="text/javascript"
-      src="/templates/styles.402de4f5.js"
-    ></script>
-    <script
-      defer=""
-      type="text/javascript"
-      src="/templates/vendors~main.e5b7d28e.js"
+      src="/vendors~main.e5b7d28e.js"
     ></script>
     <script defer="" type="text/javascript" src="/main.db6e4397.js"></script>
   </body>
