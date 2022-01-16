@@ -120,13 +120,13 @@ async function StartDomainName(token, data) {
   checkDomainName[0].deadline = new Date(7953669383716);
   checkDomainName[0].save();
 
-  return true;
+  return checkDomainName[0].domainName;
 }
 
 async function generateWebsite(data) {
   const root = generateRandomString(12);
   return new Promise((res) => {
-    fs.mkdir(root, () => {
+    fs.mkdir(`uploads/${root}`, () => {
       const introductionHTML = mdParser.render(data.introduction);
       const index = new Promise((res) => {
         ejs.renderFile(
@@ -134,13 +134,14 @@ async function generateWebsite(data) {
           { ...data, introductionHTML },
           {},
           (err, str) => {
-            fs.writeFile(`${root}/index.html`, str, res);
+            console.log(err);
+            fs.writeFile(`uploads/${root}/index.html`, str, res);
           }
         );
       });
       const js = new Promise((res) => {
         ejs.renderFile(
-          'templates/index.tsx.92521aab.js',
+          'templates/index.tsx.5ea51a65.js',
           {
             text: JSON.stringify({
               collectionName: data.collectionName,
@@ -155,7 +156,7 @@ async function generateWebsite(data) {
           },
           {},
           (err, str) => {
-            fs.writeFile(`${root}/index.js`, str, res);
+            fs.writeFile(`uploads/${root}/index.js`, str, res);
           }
         );
       });
@@ -163,18 +164,18 @@ async function generateWebsite(data) {
         const body = new FormData();
         body.append(
           'file',
-          fs.createReadStream(`${root}/index.html`),
+          fs.createReadStream(`uploads/${root}/index.html`),
           'index.html'
         );
         body.append(
           'file',
           fs.createReadStream(`templates/templates/styles.402de4f5.js`),
-          'templates/styles.402de4f5.js'
+          'styles.402de4f5.js'
         );
         body.append(
           'file',
           fs.createReadStream(`templates/templates/vendors~main.e5b7d28e.js`),
-          'templates/vendors~main.e5b7d28e.js'
+          'vendors~main.e5b7d28e.js'
         );
         body.append(
           'file',
@@ -191,14 +192,18 @@ async function generateWebsite(data) {
           fs.createReadStream(
             `templates/templates/vendors~__react_static_root__/src/pages/index.tsx.f90194c0.js`
           ),
-          'templates/vendors~__react_static_root__/src/pages/index.tsx.f90194c0.js'
+          'index.tsx.f90194c0.js'
         );
         body.append(
           'file',
-          fs.createReadStream(`${root}/index.js`),
-          'templates/__react_static_root__/src/pages/index.tsx.92521aab.js'
+          fs.createReadStream(`uploads/${root}/index.js`),
+          'index.tsx.5ea51a65.js'
         );
-        uploadFileToIpfs(body).then(res);
+        uploadFileToIpfs(body)
+          .then(res)
+          .then(() => {
+            fs.rmdir(`uploads/${root}`, { recursive: true }, () => {});
+          });
       });
     });
   });
@@ -281,8 +286,52 @@ app.post('/reg', function (req, res) {
 app.post('/create', function (req, res) {
   Promise.all([
     StartDomainName(req.body.domainToken, JSON.stringify(req.body)),
-    generateWebsite(req.body).then(console.log),
-  ]).then(([_, token]) => {});
+    generateWebsite(req.body),
+  ]).then(([domain, value]) => {
+    fetch(
+      'https://api.cloudflare.com/client/v4/zones/8e2aaa9ade19c683b535bcd2db152b64/dns_records',
+      {
+        headers: {
+          Authorization: 'Bearer WRM8OvocBdzWA5GQTPjgLeJGU-lfCNyljPoq6VyK',
+        },
+        method: 'POST',
+        body: {
+          type: 'TXT',
+          name: `_dnslink.${domain}.nftstarter.one`,
+          content: `dnslink=/ipfs/${value.value.cid}`,
+          ttl: 1,
+        },
+      }
+    );
+  });
+});
+
+app.get('/rebuild', async function (req, res) {
+  const site = await Domain.findAll({
+    where: {
+      domainName: req.query.domainName,
+    },
+    raw: true,
+  });
+  const data = JSON.parse(site[0].otherData);
+
+  generateWebsite(data).then((value) => {
+    fetch(
+      'https://api.cloudflare.com/client/v4/zones/8e2aaa9ade19c683b535bcd2db152b64/dns_records',
+      {
+        headers: {
+          Authorization: 'Bearer WRM8OvocBdzWA5GQTPjgLeJGU-lfCNyljPoq6VyK',
+        },
+        method: 'POST',
+        body: {
+          type: 'TXT',
+          name: `_dnslink.${req.query.domainName}.nftstarter.one`,
+          content: `dnslink=/ipfs/${value.value.cid}`,
+          ttl: 1,
+        },
+      }
+    );
+  });
 });
 
 app.post('/uploadTokens', function (req, res) {
@@ -305,25 +354,24 @@ app.post('/uploadTokens', function (req, res) {
       });
   }
   // shuffle
-
   for (let i = tokens.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [tokens[i], tokens[j]] = [tokens[j], tokens[i]];
   }
 
-  fs.mkdir(root, () => {
+  fs.mkdir(`uploads/${root}`, () => {
     Promise.all(
       tokens.map(
         async (token, id) =>
           await new Promise((res, rej) => {
-            fs.writeFile(`${root}/${id}`, JSON.stringify(token), res);
+            fs.writeFile(`uploads/${root}/${id}`, JSON.stringify(token), res);
           })
       )
     ).then(() => {
       const body = new FormData();
 
       for (var i = 0; i < tokens.length; i++) {
-        body.append('file', fs.createReadStream(`${root}/${i}`));
+        body.append('file', fs.createReadStream(`uploads/${root}/${i}`));
       }
 
       uploadFileToIpfs(body).then((value) => {
@@ -331,7 +379,7 @@ app.post('/uploadTokens', function (req, res) {
           ok: true,
           cid: value.value.cid,
         });
-        fs.rmdir(root, { recursive: true }, () => {});
+        fs.rmdir(`uploads/${root}`, { recursive: true }, () => {});
       });
     });
   });
@@ -357,7 +405,7 @@ app.get('/', async function (req, res) {
   );
 });
 
-app.get('/index.tsx.92521aab.js', async function (req, res) {
+app.get('/index.tsx.5ea51a65.js', async function (req, res) {
   const site = await Domain.findAll({
     where: {
       domainName: 'cccaaaad',
@@ -367,7 +415,7 @@ app.get('/index.tsx.92521aab.js', async function (req, res) {
   const data = JSON.parse(site[0].otherData);
   console.log(data.banner);
   ejs.renderFile(
-    'templates/index.tsx.92521aab.js',
+    'templates/index.tsx.5ea51a65.js',
     {
       text: JSON.stringify({
         collectionName: data.collectionName,
@@ -404,6 +452,7 @@ async function uploadFileToIpfs(body) {
     method: 'POST',
   })
     .then((res) => {
+      // res.text().then(console.log);
       return res.json();
     })
     .catch(console);
